@@ -7,7 +7,7 @@ app.use(cors());
 
 // 기본 라우트 설정
 app.get("/", (req, res) => {
-  res.send("{기본 출력 메시지}");
+  res.send("Task Ez Web Server!");
 });
 
 // 서버 시작
