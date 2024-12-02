@@ -50,18 +50,18 @@ app.listen(PORT, "0.0.0.0", () => {
 
 // *** 사용자 로그인 API 시작
 app.post('/api/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { id, password } = req.body;
 
-  console.log("로그인 요청 받은 데이터:", { email, password });
+  console.log("로그인 요청 받은 데이터:", { id, password });
 
   // Step 1: 이메일로 사용자 조회
-  db.query('SELECT * FROM user WHERE email = ?', [email])
+  db.query('SELECT * FROM user WHERE id = ?', [id])
     .then((rows: any) => {
       console.log("사용자 조회 결과:", rows);
 
       if (rows.length === 0) {
         // 사용자가 없는 경우
-        console.log("사용자를 찾을 수 없습니다:", email);
+        console.log("사용자를 찾을 수 없습니다:", id);
         return res.status(401).json({
           success: false,
           message: '사용자를 찾을 수 없습니다. 회원가입 후 이용해주세요.',
@@ -82,7 +82,7 @@ app.post('/api/login', (req: Request, res: Response) => {
 
         // Step 4: 로그인 성공 처리
         const nickname = user.name; // DB의 name 필드를 닉네임으로 사용
-        console.log(`[${email}] ${nickname}님 로그인 성공`);
+        console.log(`[${id}] ${nickname}님 로그인 성공`);
         res.json({
           success: true,
           message: '로그인 성공',
@@ -104,20 +104,21 @@ app.post('/api/login', (req: Request, res: Response) => {
 
 // *** 로그아웃 API 수정 ***
 app.post('/api/logout', async (req: Request, res: Response) => {
-  const { email } = req.body;
+  const { id } = req.body;
 
-  console.log("로그아웃 요청 받은 데이터:", { email });
+  console.log("로그아웃 요청 받은 데이터:", { id });
 
   try {
     // Step 1: 사용자 조회
-    const rows = await db.query("SELECT * FROM user WHERE email = ?", [email]);
+    const rows = await db.query("SELECT * FROM user WHERE id = ?", [id]);
 
     if (rows.length === 0) {
       // 사용자 정보를 찾지 못한 경우
-      return res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+      res.status(404).json({ success: false, message: "사용자를 찾을 수 없습니다." });
+      return;
     }
 
-    console.log(`[${email}] 님의 로그아웃이 성공적으로 완료되었습니다.`);
+    console.log(`[${id}] 님의 로그아웃이 성공적으로 완료되었습니다.`);
 
     // Step 4: 성공 응답 반환
     res.status(200).json({ success: true, message: "로그아웃이 성공적으로 완료되었습니다." });
@@ -132,15 +133,15 @@ app.post('/api/logout', async (req: Request, res: Response) => {
 
 // *** 사용자 회원가입 API 시작
 app.post('/api/register', (req: Request, res: Response) => {
-  const { email, password, name } = req.body as { email: string; password: string; name: string; };
-  console.log("받은 데이터:", { email, password, name });
+  const { id, password, name } = req.body as { id: string; password: string; name: string; };
+  console.log("받은 데이터:", { id, password, name });
 
-  // Step 1: 이메일 중복 확인
-  db.query('SELECT * FROM user WHERE email = ?', [email])
-    .then((rows_email: any) => {
-      if (rows_email.length > 0) {
-        console.log("이메일이 이미 존재합니다:", email);
-        return res.status(400).json({ success: false, message: '이메일이 이미 존재합니다' });
+  // Step 1: 아이디 중복 확인
+  db.query('SELECT * FROM user WHERE id = ?', [id])
+    .then((rows_id: any) => {
+      if (rows_id.length > 0) {
+        console.log("아이디가 이미 존재합니다:", id);
+        return res.status(400).json({ success: false, message: '아이디가 이미 존재합니다' });
       }
 
       // Step 2: 비밀번호 암호화
@@ -151,8 +152,8 @@ app.post('/api/register', (req: Request, res: Response) => {
 
       // Step 3: 사용자 저장
       return db.query(
-        'INSERT INTO user (email, password, plain_password, name) VALUES (?, ?, ?, ?)',
-        [email, hashedPassword, password, name]
+        'INSERT INTO user (id, password, plain_password, name) VALUES (?, ?, ?, ?)',
+        [id, hashedPassword, password, name]
       );
     })
     .then((result: any) => {
