@@ -22,6 +22,7 @@ const db = MariaDB.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   connectionLimit: 10,
+  bigNumberStrings: true,
 });
 
 console.log(process.env.DB_HOST, process.env.DB_PORT, process.env.DB_USERNAME, process.env.DB_PASSWORD, process.env.DB_NAME);
@@ -166,3 +167,104 @@ app.post('/api/register', (req: Request, res: Response) => {
       res.status(500).json({ success: false, message: '서버 오류 발생', error: err.message });
     });
 }); // *** 사용자 회원가입 API 끝
+
+
+
+
+
+// *** 사용자가 저장한 작업 저장 시작
+app.post('/api/saveTask', (req: Request, res: Response) => {
+  const { id, user_id, title, description, start, end, color } = req.body;
+
+  console.log("작업 저장 요청 데이터:", req.body);
+
+  if (!user_id || !title || !start || !end || !color) {
+      res.status(400).json({
+      success: false,
+      message: "필수 입력값이 누락되었습니다.",
+    });
+    return;
+  }
+
+  if (id && id > 0) {
+    // 업데이트 쿼리
+    const updateQuery = `
+      UPDATE task
+      SET title = ?, content = ?, start_date = ?, end_date = ?, color = ?, finished = 0, deleted = 0
+      WHERE task_id = ? AND user_id = ?
+    `;
+
+    db.query(updateQuery, [
+      title,
+      description || "",
+      new Date(start).toISOString().slice(0, 19).replace("T", " "),
+      new Date(end).toISOString().slice(0, 19).replace("T", " "),
+      color,
+      id,
+      user_id,
+    ])
+      .then((result: any) => {
+        if (result.affectedRows > 0) {
+          res.status(200).json({
+            success: true,
+            message: "작업이 성공적으로 업데이트되었습니다.",
+            task_id: Number(result.insertId), // 수동 변환
+          });
+        } else {
+          res.status(404).json({
+            success: false,
+            message: "업데이트할 작업을 찾을 수 없습니다.",
+          });
+        }
+      })
+      .catch((err: any) => {
+        console.error("작업 업데이트 중 오류 발생:", err);
+        res.status(500).json({
+          success: false,
+          message: "작업 업데이트 중 서버 오류가 발생했습니다.",
+          error: err.message,
+        });
+      });
+  } else {  //작업이 없는 경우
+    // 삽입 쿼리
+    const insertQuery = `
+      INSERT INTO task (user_id, title, content, start_date, end_date, color, finished, deleted)
+      VALUES (?, ?, ?, ?, ?, ?, 0, 0)
+    `;
+
+    db.query(insertQuery, [
+      user_id,
+      title,
+      description || "",
+      new Date(start).toISOString().slice(0, 19).replace("T", " "),
+      new Date(end).toISOString().slice(0, 19).replace("T", " "),
+      color,
+    ])
+      .then((result: any) => {
+        console.log("DB 삽입 결과:", result.insertId, typeof result.insertId);
+
+
+        res.status(201).json({
+          success: true,
+          message: "작업이 성공적으로 저장되었습니다.",
+          task_id: Number(result.insertId), // 명시적으로 숫자로 변환
+        });
+      })
+      .catch((err: any) => {
+        console.error("작업 저장 중 오류 발생:", err);
+        res.status(500).json({
+          success: false,
+          message: "작업 저장 중 서버 오류가 발생했습니다.",
+          error: err.message,
+        });
+      });
+  }
+});  // *** 사용자가 저장한 작업 목록 전송 끝
+
+
+
+
+
+// *** 사용자가 등록한 작업 목록 전송 시작
+
+// *** 사용자가 등록한 작업 목록 전송 끝
