@@ -338,3 +338,64 @@ app.post('/api/deleteTask', (req: Request, res: Response) => {
       }
     });
 }); // 작업 삭제 API 끝
+
+
+// *** 작업 완료 API 시작
+app.post('/api/finishTask', (req: Request, res: Response) => {
+  const { task_id, user_id } = req.body;
+
+  console.log("작업 완료 요청 데이터:", req.body);
+
+  // 입력값 검증
+  if (!task_id || !user_id || typeof task_id !== "number" || typeof user_id !== "number") {
+    res.status(400).json({
+      success: false,
+      message: "필수 입력값이 누락되었거나 잘못된 형식입니다. (task_id, user_id는 숫자여야 합니다)",
+    });
+    return;
+  }
+
+  // 완료 쿼리
+  const finishQuery = `
+    UPDATE task
+    SET finished = 1
+    WHERE task_id = ? AND user_id = ? AND deleted = 0 AND finished = 0
+  `;
+
+  db.query(finishQuery, [task_id, user_id])
+    .then((result: any) => {
+      if (result.affectedRows > 0) {
+        // 완료된 데이터 조회 쿼리
+        return db.query(`SELECT * FROM task WHERE task_id = ? AND user_id = ?`, [task_id, user_id]);
+      } else {
+        res.status(404).json({
+          success: false,
+          message: "완료할 작업을 찾을 수 없거나 이미 완료되었습니다.",
+        });
+        throw new Error("완료할 작업 없음");
+      }
+    })
+    .then((rows: any) => {
+      if (rows.length > 0) {
+        console.log("완료된 작업 데이터:", rows[0]); // 개발자가 확인하기 위한 로그
+
+        res.status(200).json({
+          success: true,
+          message: "작업이 성공적으로 완료되었습니다.",
+          task: rows[0], // 완료된 작업 데이터 반환
+        });
+      }
+    })
+    .catch((err: any) => {
+      if (err.message !== "완료할 작업 없음") {
+        console.error("작업 완료 중 오류 발생:", err);
+        res.status(500).json({
+          success: false,
+          message: "작업 완료 중 서버 오류가 발생했습니다.",
+          error: err.message,
+        });
+      }
+    });
+});
+// 작업 완료 API 끝
+
