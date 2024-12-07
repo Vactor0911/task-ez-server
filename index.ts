@@ -216,7 +216,7 @@ app.post("/api/get-tasks", (req: Request, res: Response) => {
 app.post("/api/save-task", (req: Request, res: Response) => {
   const { id, user_id, title, description, start, end, color } = req.body;
 
-  console.log("작업 저장 요청 데이터:", req.body);
+  console.log("작업 저장 요청 데이터:", req.body, "\n\n");
 
   if (!user_id || !title || !start || !end || !color) {
     res.status(400).json({
@@ -245,25 +245,36 @@ app.post("/api/save-task", (req: Request, res: Response) => {
     ])
       .then((result: any) => {
         if (result.affectedRows > 0) {
-          res.status(200).json({
-            success: true,
-            message: "작업이 성공적으로 업데이트되었습니다.",
-            task_id: Number(result.insertId), // 수동 변환
-          });
+          // 업데이트된 데이터 조회 쿼리
+          return db.query(`SELECT * FROM task WHERE task_id = ? AND user_id = ?`, [id, user_id]);
         } else {
           res.status(404).json({
             success: false,
             message: "업데이트할 작업을 찾을 수 없습니다.",
           });
+          throw new Error("업데이트할 작업 없음");
+        }
+      })
+      .then((rows: any) => {
+        if (rows.length > 0) {
+          console.log("업데이트된 작업 데이터 및 형식 확인:", rows[0]);
+
+          res.status(200).json({
+            success: true,
+            message: "작업이 성공적으로 업데이트되었습니다.",
+            task: rows[0], // 업데이트된 작업 데이터 반환
+          });
         }
       })
       .catch((err: any) => {
-        console.error("작업 업데이트 중 오류 발생:", err);
-        res.status(500).json({
-          success: false,
-          message: "작업 업데이트 중 서버 오류가 발생했습니다.",
-          error: err.message,
-        });
+        if (err.message !== "업데이트할 작업 없음") {
+          console.error("작업 업데이트 중 오류 발생:", err);
+          res.status(500).json({
+            success: false,
+            message: "작업 업데이트 중 서버 오류가 발생했습니다.",
+            error: err.message,
+          });
+        }
       });
   } else { // 새 작업 추가
     // 삽입 쿼리
