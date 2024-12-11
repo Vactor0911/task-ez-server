@@ -28,7 +28,6 @@ const db = MariaDB.createPool({
 // MariaDB 연결 확인
 db.getConnection()
   .then((conn) => {
-    console.log("task-ez 데이터베이스가 성공적으로 연결되었습니다");
     conn.release();
   })
   .catch((err) => {
@@ -54,11 +53,8 @@ app.post("/api/login", (req: Request, res: Response) => {
   // Step 1: 이메일로 사용자 조회
   db.query("SELECT * FROM user WHERE id = ?", [id])
     .then((rows: any) => {
-      console.log("사용자 조회 결과:", rows);
-
       if (rows.length === 0) {
         // 사용자가 없는 경우
-        console.log("사용자를 찾을 수 없습니다:", id);
         return res.status(401).json({
           success: false,
           message: "사용자를 찾을 수 없습니다. 회원가입 후 이용해주세요.",
@@ -70,7 +66,6 @@ app.post("/api/login", (req: Request, res: Response) => {
       // Step 3: 암호화된 비밀번호 비교
       return bcrypt.compare(password, user.password).then((isPasswordMatch) => {
         if (!isPasswordMatch) {
-          console.log("비밀번호가 일치하지 않습니다");
           return res.status(401).json({
             success: false,
             message: "비밀번호가 일치하지 않습니다",
@@ -80,7 +75,6 @@ app.post("/api/login", (req: Request, res: Response) => {
         // Step 4: 로그인 성공 처리
         const nickname = user.name; // DB의 name 필드를 닉네임으로 사용
         const userId = user.user_id; // DB의 user_id 필드를 사용자 ID로 사용
-        console.log(`[${id}] ${nickname}님 로그인 성공`);
         res.json({
           success: true,
           message: "로그인 성공",
@@ -141,7 +135,6 @@ app.post("/api/register", (req: Request, res: Response) => {
     password: string;
     name: string;
   };
-  console.log("받은 데이터:", { id, password, name });
 
   // Step 1: 아이디 중복 확인
   db.query("SELECT * FROM user WHERE id = ?", [id])
@@ -163,7 +156,6 @@ app.post("/api/register", (req: Request, res: Response) => {
       );
     })
     .then((result: any) => {
-      console.log("사용자 삽입 결과:", result);
       res
         .status(201)
         .json({ success: true, message: "사용자가 성공적으로 등록되었습니다" });
@@ -183,8 +175,6 @@ app.post("/api/register", (req: Request, res: Response) => {
 app.post("/api/get-tasks", (req: Request, res: Response) => {
   const { userId } = req.body;
 
-  console.log("작업 조회 요청 데이터:", req.body);
-
   // 사용자의 작업 조회 쿼리
   const selectQuery = `
     SELECT * FROM task
@@ -194,7 +184,6 @@ app.post("/api/get-tasks", (req: Request, res: Response) => {
   // 작업 조회 요청
   db.query(selectQuery, [userId])
     .then((rows: any) => {
-      console.log("작업 조회 결과:", rows);
 
       res.status(200).json({
         success: true,
@@ -215,8 +204,6 @@ app.post("/api/get-tasks", (req: Request, res: Response) => {
 // 작업 저장 및 편집 API
 app.post("/api/save-task", (req: Request, res: Response) => {
   const { id, user_id, title, description, start, end, color } = req.body;
-
-  console.log("작업 저장 요청 데이터:", req.body, "\n\n");
 
   if (!user_id || !title || !start || !end || !color) {
     res.status(400).json({
@@ -257,8 +244,6 @@ app.post("/api/save-task", (req: Request, res: Response) => {
       })
       .then((rows: any) => {
         if (rows.length > 0) {
-          console.log("업데이트된 작업 데이터 및 형식 확인:", rows[0]);
-
           res.status(200).json({
             success: true,
             message: "작업이 성공적으로 업데이트되었습니다.",
@@ -292,8 +277,6 @@ app.post("/api/save-task", (req: Request, res: Response) => {
       color,
     ])
       .then((result: any) => {
-        console.log("DB 삽입 결과:", result.insertId, typeof result.insertId);
-
         res.status(201).json({
           success: true,
           message: "작업이 성공적으로 저장되었습니다.",
@@ -314,8 +297,6 @@ app.post("/api/save-task", (req: Request, res: Response) => {
 // 작업 삭제 API
 app.post("/api/delete-task", (req: Request, res: Response) => {
   const { taskId } = req.body;
-  console.log("작업 삭제 요청 데이터:", req.body);
-
   // 필수 입력 데이터 누락 예외처리
   if (!taskId) {
     res.status(400).json({
@@ -358,8 +339,6 @@ app.post("/api/delete-task", (req: Request, res: Response) => {
 // 작업 검색 API
 app.post("/api/search-tasks", (req: Request, res: Response) => {
   const { userId, title } = req.body;
-  console.log("작업 검색 요청 데이터:", req.body);
-
   // 검색 쿼리
   const searchQuery = `
     SELECT * FROM task
@@ -368,8 +347,6 @@ app.post("/api/search-tasks", (req: Request, res: Response) => {
 
   db.query(searchQuery, [userId, `%${title}%`])
     .then((rows: any) => {
-      console.log("작업 검색 결과:", rows);
-
       res.status(200).json({
         success: true,
         message: "작업 검색 성공",
